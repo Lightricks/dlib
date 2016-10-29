@@ -541,16 +541,11 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_sqrt_ps(item);
 #elif defined(DLIB_HAVE_NEON)
-#if 0 //TODO: optz
-		float32x4_t recipsq = vrsqrteq_f32(item);
-		return vrecpeq_f32(recipsq);
-#else
-		float _lhs[4]; item.store(_lhs);
-		return simd4f(std::sqrt(_lhs[0]),
-					  std::sqrt(_lhs[1]),
-					  std::sqrt(_lhs[2]),
-					  std::sqrt(_lhs[3]));
-#endif		
+        float32x4_t x1 = vmaxq_f32(item, vdupq_n_f32(FLT_MIN));
+        float32x4_t e = vrsqrteq_f32(x1);
+        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
+        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
+        return vmulq_f32(item, e);
 #else
         return simd4f(std::sqrt(item[0]),
                       std::sqrt(item[1]),
@@ -566,6 +561,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE41
         return _mm_ceil_ps(item);
 #elif defined(DLIB_HAVE_SSE2) || defined(DLIB_HAVE_NEON)
+      std::cout << "ceil!" << std::endl;
         float temp[4];
         item.store(temp);
         temp[0] = std::ceil(temp[0]);
@@ -590,6 +586,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE41
         return _mm_floor_ps(item);
 #elif defined(DLIB_HAVE_SSE2) || defined(DLIB_HAVE_NEON)
+      std::cout << "floor!" << std::endl;
         float temp[4];
         item.store(temp);
         temp[0] = std::floor(temp[0]);
