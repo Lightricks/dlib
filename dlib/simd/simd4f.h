@@ -484,15 +484,10 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_rsqrt_ps(item); 
 #elif defined(DLIB_HAVE_NEON)
-#if 1 // TODO : optz
-		float _lhs[4]; item.store(_lhs);
-		return simd4f(1.0f/std::sqrt(_lhs[0]),
-					  1.0f/std::sqrt(_lhs[1]),
-					  1.0f/std::sqrt(_lhs[2]),
-					  1.0f/std::sqrt(_lhs[3]));
-#else 
-		return vrsqrteq_f32(item);
-#endif
+      float32x4_t x1 = vmaxq_f32(item, vdupq_n_f32(FLT_MIN));
+      float32x4_t e = vrsqrteq_f32(x1);
+      e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
+      return vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
 #else
         return simd4f(1.0f/std::sqrt(item[0]),
                       1.0f/std::sqrt(item[1]),
@@ -541,11 +536,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_sqrt_ps(item);
 #elif defined(DLIB_HAVE_NEON)
-        float32x4_t x1 = vmaxq_f32(item, vdupq_n_f32(FLT_MIN));
-        float32x4_t e = vrsqrteq_f32(x1);
-        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
-        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
-        return vmulq_f32(item, e);
+        return vmulq_f32(item, reciprocal_sqrt(item));
 #else
         return simd4f(std::sqrt(item[0]),
                       std::sqrt(item[1]),
