@@ -145,24 +145,24 @@ namespace dlib
         typedef float type;
 
         inline simd4f_bool() {}
-        inline simd4f_bool(const float32x4_t& val):x(val) {}
-        inline simd4f_bool(float r0, float r1, float r2, float r3)
+        inline simd4f_bool(const uint32x4_t& val):x(val) {}
+        inline simd4f_bool(uint r0, uint r1, uint r2, uint r3)
         {
-          float __attribute__((aligned (16))) data[4] = { r0, r1, r2, r3 };
-          x = vld1q_f32(data);
+          uint __attribute__((aligned (16))) data[4] = { r0, r1, r2, r3 };
+          x = vld1q_u32(data);
         }
 
-        inline simd4f_bool& operator=(const float32x4_t& val)
+        inline simd4f_bool& operator=(const uint32x4_t& val)
         {
             x = val;
             return *this;
         }
 
-        inline operator float32x4_t() const { return x; }
+        inline operator uint32x4_t() const { return x; }
 
 
     private:
-        float32x4_t x;
+        uint32x4_t x;
     };	
 #else
     class simd4f
@@ -349,7 +349,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_cmpeq_ps(lhs, rhs); 
 #elif defined(DLIB_HAVE_NEON)
-        return (float32x4_t)vceqq_f32(lhs, rhs);
+        return vceqq_f32(lhs, rhs);
 #else
         return simd4f_bool(lhs[0]==rhs[0],
                            lhs[1]==rhs[1],
@@ -365,7 +365,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_cmpneq_ps(lhs, rhs); 
 #elif defined(DLIB_HAVE_NEON)
-        return (float32x4_t)vmvnq_s32((int32x4_t)vceqq_f32(lhs, rhs));
+        return vmvnq_s32((int32x4_t)vceqq_f32(lhs, rhs));
 #else
         return simd4f_bool(lhs[0]!=rhs[0],
                            lhs[1]!=rhs[1],
@@ -381,7 +381,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_cmplt_ps(lhs, rhs); 
 #elif defined(DLIB_HAVE_NEON)
-        return (float32x4_t)vcltq_f32(lhs, rhs);
+        return vcltq_f32(lhs, rhs);
 #else
         return simd4f_bool(lhs[0]<rhs[0],
                            lhs[1]<rhs[1],
@@ -404,7 +404,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_cmple_ps(lhs, rhs); 
 #elif defined(DLIB_HAVE_NEON)
-        return (float32x4_t)vcleq_f32(lhs, rhs);
+        return vcleq_f32(lhs, rhs);
 #else
         return simd4f_bool(lhs[0]<=rhs[0],
                            lhs[1]<=rhs[1],
@@ -484,15 +484,10 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_rsqrt_ps(item); 
 #elif defined(DLIB_HAVE_NEON)
-#if 1 // TODO : optz
-		float _lhs[4]; item.store(_lhs);
-		return simd4f(1.0f/std::sqrt(_lhs[0]),
-					  1.0f/std::sqrt(_lhs[1]),
-					  1.0f/std::sqrt(_lhs[2]),
-					  1.0f/std::sqrt(_lhs[3]));
-#else 
-		return vrsqrteq_f32(item);
-#endif
+      float32x4_t x1 = vmaxq_f32(item, vdupq_n_f32(FLT_MIN));
+      float32x4_t e = vrsqrteq_f32(x1);
+      e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
+      return vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
 #else
         return simd4f(1.0f/std::sqrt(item[0]),
                       1.0f/std::sqrt(item[1]),
@@ -541,11 +536,7 @@ namespace dlib
 #ifdef DLIB_HAVE_SSE2
         return _mm_sqrt_ps(item);
 #elif defined(DLIB_HAVE_NEON)
-        float32x4_t x1 = vmaxq_f32(item, vdupq_n_f32(FLT_MIN));
-        float32x4_t e = vrsqrteq_f32(x1);
-        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
-        e = vmulq_f32(vrsqrtsq_f32(vmulq_f32(x1, e), e), e);
-        return vmulq_f32(item, e);
+        return vmulq_f32(item, reciprocal_sqrt(item));
 #else
         return simd4f(std::sqrt(item[0]),
                       std::sqrt(item[1]),
@@ -621,8 +612,8 @@ namespace dlib
 		//std::cout << " cmp1 = " << cmp1 << " a = " << a << " b = " << b << std::endl;
 		//std::cout << " r1 = " << r1 << " r2 = " << r2 << std::endl;
 		return (float32x4_t)vorrq_s32(
-		vandq_s32((int32x4_t)((float32x4_t)cmp),(int32x4_t)((float32x4_t)a)) , 
-		vbicq_s32((int32x4_t)((float32x4_t)b), (int32x4_t)((float32x4_t)cmp)));
+		    vandq_u32((uint32x4_t)cmp,(uint32x4_t)((float32x4_t)a)) , 
+		    vbicq_u32((uint32x4_t)((float32x4_t)b), (uint32x4_t)cmp));
 #else
 		simd4f v(cmp);
 		float _cmp[4]; v.store(_cmp);
