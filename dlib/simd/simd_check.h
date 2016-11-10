@@ -51,6 +51,11 @@
                 #define DLIB_HAVE_AVX2
             #endif
         #endif
+        #ifdef __ARM_NEON
+            #ifndef DLIB_HAVE_NEON
+                #define DLIB_HAVE_NEON
+            #endif			
+        #endif
     #endif
 #endif
 
@@ -75,6 +80,9 @@
 #ifdef DLIB_HAVE_AVX2
     #include <immintrin.h> // AVX
 //    #include <avx2intrin.h>
+#endif
+#ifdef DLIB_HAVE_NEON
+    #include <arm_neon.h> // ARM NEON
 #endif
 
 #endif // DLIB_SIMd_CHECK_Hh_
