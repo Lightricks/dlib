@@ -601,8 +601,6 @@ namespace dlib
 #elif defined(DLIB_HAVE_NEON)
         return (float32x4_t)vorrq_s32(vandq_u32((uint32x4_t)((float32x4_t)a), (uint32x4_t)cmp),
                                       vbicq_u32((uint32x4_t)((float32x4_t)b), (uint32x4_t)cmp));
-#endif
-
 #else
         return simd4f(cmp[0]?a[0]:b[0],
                       cmp[1]?a[1]:b[1],
