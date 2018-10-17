@@ -25,6 +25,7 @@
          <name>Tools</name>
          <item>bigint</item> 
          <item>disjoint_subsets</item> 
+         <item>disjoint_subsets_sized</item> 
          <item nolink="true">
             <name>Quantum Computing</name>
             <sub>
@@ -58,6 +59,8 @@
          <item>rand</item> 
          <item>median</item> 
          <item>running_stats</item> 
+         <item>running_stats_decayed</item> 
+         <item>running_scalar_covariance_decayed</item> 
          <item>running_gradient</item> 
          <item>running_scalar_covariance</item> 
          <item>mean_sign_agreement</item> 
@@ -69,6 +72,15 @@
          <item>running_cross_covariance</item> 
          <item>random_subset_selector</item> 
          <item>randomly_subsample</item> 
+         <item>find_upper_quantile</item> 
+         <item>count_steps_without_decrease_robust</item> 
+         <item>count_steps_without_decrease</item> 
+         <item>count_steps_without_increase</item> 
+
+         <item>binomial_random_vars_are_different</item> 
+         <item>event_correlation</item> 
+         <item>max_scoring_element</item> 
+         <item>min_scoring_element</item> 
 
       </section>
 
@@ -97,6 +109,10 @@
          <name>Filtering</name>
          <item>kalman_filter</item> 
          <item>rls_filter</item> 
+         <item>momentum_filter</item> 
+         <item>rect_filter</item> 
+         <item>find_optimal_rect_filter</item> 
+         <item>find_optimal_momentum_filter</item> 
       </section>
 
     </top>  
@@ -319,7 +335,85 @@
                     by Greg Welch and Gary Bishop
                 </blockquote>
          </description>
-         
+      </component>
+            
+   <!-- ************************************************************************* -->
+      
+      <component>
+         <name>momentum_filter</name>
+         <file>dlib/filtering.h</file>
+         <spec_file link="true">dlib/filtering/kalman_filter_abstract.h</spec_file>
+         <description>
+            This object is a simple tool for filtering a single scalar value that
+            measures the location of a moving object that has some non-trivial
+            momentum.  Importantly, the measurements are noisy and the object can
+            experience sudden unpredictable accelerations.  To accomplish this
+            filtering we use a simple <a href="#kalman_filter">Kalman filter</a> with a 
+            state transition model of:
+<pre>
+
+   position_{i+1} = position_{i} + velocity_{i} 
+   velocity_{i+1} = velocity_{i} + some_unpredictable_acceleration
+
+</pre>
+
+            and a measurement model of:
+<pre>
+
+   measured_position_{i} = position_{i} + measurement_noise
+
+</pre>
+
+            Where <tt>some_unpredictable_acceleration</tt> and <tt>measurement_noise</tt> are 0 mean Gaussian 
+            noise sources.
+
+            To allow for really sudden and large but infrequent accelerations, at each
+            step we check if the current measured position deviates from the predicted
+            filtered position by more than a user specified amount,  
+            and if so we adjust the filter's state to keep it within these bounds.
+            This allows the moving object to undergo large unmodeled accelerations, far
+            in excess of what would be suggested by the basic Kalman filter's noise model, without
+            then experiencing a long lag time where the Kalman filter has to "catch
+            up" to the new position.
+         </description>
+      </component>
+            
+   <!-- ************************************************************************* -->
+      
+      <component>
+         <name>rect_filter</name>
+         <file>dlib/filtering.h</file>
+         <spec_file link="true">dlib/filtering/kalman_filter_abstract.h</spec_file>
+         <description>
+            This object is just a <a href="#momentum_filter">momentum_filter</a> applied to the
+            four corners of a <a href="linear_algebra.html#rectangle">rectangle</a>.  It allows
+            you to filter a stream of rectangles, for instance, bounding boxes from an object detector
+            applied to a video stream.
+         </description>
+      </component>
+            
+   <!-- ************************************************************************* -->
+      
+      <component>
+         <name>find_optimal_momentum_filter</name>
+         <file>dlib/filtering.h</file>
+         <spec_file link="true">dlib/filtering/kalman_filter_abstract.h</spec_file>
+         <description>
+            This function finds the "optimal" settings of a <a href="#momentum_filter">momentum_filter</a> 
+            based on unfiltered measurement data.
+         </description>
+      </component>
+            
+   <!-- ************************************************************************* -->
+      
+      <component>
+         <name>find_optimal_rect_filter</name>
+         <file>dlib/filtering.h</file>
+         <spec_file link="true">dlib/filtering/kalman_filter_abstract.h</spec_file>
+         <description>
+            This function finds the "optimal" settings of a <a href="#rect_filter">rect_filter</a> 
+            based on unfiltered measurement data.
+         </description>
       </component>
             
    <!-- ************************************************************************* -->
@@ -460,6 +554,20 @@
    <!-- ************************************************************************* -->
 
       <component>
+         <name>disjoint_subsets_sized</name>
+         <file>dlib/disjoint_subsets.h</file>
+         <spec_file link="true">dlib/disjoint_subsets/disjoint_subsets_sized_abstract.h</spec_file>
+         <description>
+                This object is just like <a href="#disjoint_subsets">disjoint_subsets</a> except that it
+                also keeps track of the size of each set.
+         </description>
+
+      </component>
+      
+      
+   <!-- ************************************************************************* -->
+
+      <component>
          <name>running_stats</name>
          <file>dlib/statistics.h</file>
          <spec_file link="true">dlib/statistics/statistics_abstract.h</spec_file>
@@ -478,7 +586,38 @@
       
    <!-- ************************************************************************* -->
 
-      <component cpp11="true">
+      <component>
+         <name>running_stats_decayed</name>
+         <file>dlib/statistics.h</file>
+         <spec_file link="true">dlib/statistics/statistics_abstract.h</spec_file>
+         <description>
+                This object represents something that can compute the running mean and
+                variance of a stream of real numbers.  It is similar to <a href="#running_stats">running_stats</a>
+                except that it forgets about data it has seen after a certain period of
+                time.  It does this by exponentially decaying old statistics. 
+         </description>
+      </component>
+      
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>running_scalar_covariance_decayed</name>
+         <file>dlib/statistics.h</file>
+         <spec_file link="true">dlib/statistics/statistics_abstract.h</spec_file>
+         <description>
+                This object represents something that can compute the running covariance of
+                a stream of real number pairs.  It is essentially the same as
+                <a href="#running_scalar_covariance">running_scalar_covariance</a> except that it forgets about data it has seen
+                after a certain period of time.  It does this by exponentially decaying old
+                statistics. 
+         </description>
+      </component>
+      
+      
+   <!-- ************************************************************************* -->
+
+      <component>
          <name>running_gradient</name>
          <file>dlib/statistics/running_gradient.h</file>
          <spec_file link="true">dlib/statistics/running_gradient_abstract.h</spec_file>
@@ -487,6 +626,129 @@
                 trending up or down and by how much.  It does this by finding the least
                 squares fit of a line to the data and then allows you to perform a
                 statistical test on the slope of that line.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>find_upper_quantile</name>
+         <file>dlib/statistics/running_gradient.h</file>
+         <spec_file link="true">dlib/statistics/running_gradient_abstract.h</spec_file>
+         <description>
+              Finds and returns the scalar value such that a user specified percentage of
+              the values in a container are greater than said value.  For example, 0.5
+              would find the median value in a container while 0.1 would find the value
+              that lower bounded the 10% largest values in a container.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>count_steps_without_increase</name>
+         <file>dlib/statistics/running_gradient.h</file>
+         <spec_file link="true">dlib/statistics/running_gradient_abstract.h</spec_file>
+         <description>
+            Given a potentially noisy time series, this function returns a count of how
+            long the time series has gone without noticeably increasing in value.  It does
+            this by adding the elements of the time series into a <a
+            href="#running_gradient">running_gradient</a> object and counting how many
+            elements, starting with the most recent, you need to examine before you
+            are confident that the series has been increasing in value.    
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>binomial_random_vars_are_different</name>
+         <file>dlib/statistics/statistic.h</file>
+         <spec_file link="true">dlib/statistics/statistics_abstract.h</spec_file>
+         <description>
+            This function performs a simple statistical test to check if two binomially
+            distributed random variables have the same parameter (i.e. the chance of
+            "success").  It uses the simple likelihood ratio test discussed in
+            the following paper:
+            <blockquote>
+               Dunning, Ted. "Accurate methods for the statistics of surprise and
+               coincidence." Computational linguistics 19.1 (1993): 61-74.
+            </blockquote>
+            So for an extended discussion of the method see the above paper.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>event_correlation</name>
+         <file>dlib/statistics/statistic.h</file>
+         <spec_file link="true">dlib/statistics/statistics_abstract.h</spec_file>
+         <description>
+            This function does a statistical test to determine if two events co-occur in a
+            statistically significant way.  It uses the simple likelihood ratio
+            test discussed in the following paper:
+            <blockquote>
+               Dunning, Ted. "Accurate methods for the statistics of surprise and
+               coincidence." Computational linguistics 19.1 (1993): 61-74.
+            </blockquote>
+            So for an extended discussion of the method see the above paper.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>max_scoring_element</name>
+         <file>dlib/algs.h</file>
+         <spec_file link="true">dlib/algs.h</spec_file>
+         <description>
+            This function finds the element of container that has the largest score,
+            according to a user supplied score function, and returns a std::pair containing
+            that maximal element along with the score.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>min_scoring_element</name>
+         <file>dlib/algs.h</file>
+         <spec_file link="true">dlib/algs.h</spec_file>
+         <description>
+            This function finds the element of container that has the smallest score,
+            according to a user supplied score function, and returns a std::pair containing
+            that minimal element along with the score.
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>count_steps_without_decrease</name>
+         <file>dlib/statistics/running_gradient.h</file>
+         <spec_file link="true">dlib/statistics/running_gradient_abstract.h</spec_file>
+         <description>
+            Given a potentially noisy time series, this function returns a count of how
+            long the time series has gone without noticeably decreasing in value.  It does
+            this by adding the elements of the time series into a <a
+            href="#running_gradient">running_gradient</a> object and counting how many
+            elements, starting with the most recent, you need to examine before you
+            are confident that the series has been decreasing in value.    
+         </description>
+      </component>
+      
+   <!-- ************************************************************************* -->
+
+      <component>
+         <name>count_steps_without_decrease_robust</name>
+         <file>dlib/statistics/running_gradient.h</file>
+         <spec_file link="true">dlib/statistics/running_gradient_abstract.h</spec_file>
+         <description>
+            This function behaves just like <a
+            href="#count_steps_without_decrease">count_steps_without_decrease</a> except
+            that it ignores times series values that are anomalously large.  This makes it
+            robust to sudden noisy but transient spikes in the time series values.
          </description>
       </component>
       
