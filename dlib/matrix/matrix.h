@@ -33,6 +33,18 @@
 // warning off and then turning it back on at the end of the file.
 #pragma warning(disable : 4355)
 
+// "warning C4723: potential divide by 0" - This warning is triggered in
+// matrix(const std::initializer_list<T>& l) where the compiler can see that
+// matrix<> was templated in a way making NR ending up 0, but division by 0 at runtime
+// is not possible because the division operation is inside "if (NR!=0)" block.
+#pragma warning(disable : 4723)
+
+// "warning C4724: potential mod by 0" - This warning is triggered in
+// matrix(const std::initializer_list<T>& l) where the compiler can see that
+// matrix<> was templated in a way making NR ending up 0, but mod by 0 at runtime
+// is not possible because the mod operation is inside "if (NR!=0)" block.
+#pragma warning(disable : 4724)
+
 #endif
 
 namespace dlib
@@ -1163,6 +1175,12 @@ namespace dlib
 
         }
 
+        std::unique_ptr<T[]> steal_memory(
+        )
+        {
+            return data.steal_memory();
+        }
+
         matrix& operator=(const std::initializer_list<T>& l)
         {
             matrix temp(l);
@@ -1631,8 +1649,8 @@ namespace dlib
             const T val
         )
         {
-            const long size = nr()*nc();
-            for (long i = 0; i < size; ++i)
+            const size_t size = nr()*(size_t)nc();
+            for (size_t i = 0; i < size; ++i)
                 data(i) += val;
 
             return *this;
@@ -1642,8 +1660,8 @@ namespace dlib
             const T val
         )
         {
-            const long size = nr()*nc();
-            for (long i = 0; i < size; ++i)
+            const size_t size = nr()*(size_t)nc();
+            for (size_t i = 0; i < size; ++i)
                 data(i) -= val;
 
             return *this;
@@ -1751,7 +1769,7 @@ namespace dlib
 
             literal_assign_helper(const literal_assign_helper& item) : m(item.m), r(item.r), c(item.c), has_been_used(false) {}
             explicit literal_assign_helper(matrix* m_): m(m_), r(0), c(0),has_been_used(false) {next();}
-            ~literal_assign_helper() throw (std::exception)
+            ~literal_assign_helper() noexcept(false)
             {
                 DLIB_CASSERT(!has_been_used || r == m->nr(),
                              "You have used the matrix comma based assignment incorrectly by failing to\n"
@@ -1778,7 +1796,7 @@ namespace dlib
 
         private:
 
-            friend class matrix;
+            friend class matrix<T,num_rows,num_cols,mem_manager,layout>;
 
             void next (
             ) const
@@ -1812,13 +1830,9 @@ namespace dlib
         ) 
         {  
             // assign the given value to every spot in this matrix
-            for (long r = 0; r < nr(); ++r)
-            {
-                for (long c = 0; c < nc(); ++c)
-                {
-                    data(r,c) = val;
-                }
-            }
+            const size_t size = nr()*(size_t)nc();
+            for (size_t i = 0; i < size; ++i)
+                data(i) = val;
 
             // Now return the literal_assign_helper so that the user
             // can use the overloaded comma notation to initialize 
@@ -1926,6 +1940,50 @@ namespace dlib
             throw serialization_error(e.info + "\n   while deserializing a dlib::matrix");
         }
     }
+
+// ----------------------------------------------------------------------------------------
+
+    template <
+        typename T,
+        long NR,
+        long NC,
+        typename mm,
+        typename l
+        >
+    void serialize (
+        const ramdump_t<matrix<T,NR,NC,mm,l>>& item_, 
+        std::ostream& out
+    )
+    {
+        auto& item = item_.item;
+        serialize(item.nr(), out);
+        serialize(item.nc(), out);
+        if (item.size() != 0)
+            out.write((char*)&item(0,0), sizeof(item(0,0))*item.size());
+    }
+
+    template <
+        typename T,
+        long NR,
+        long NC,
+        typename mm,
+        typename l
+        >
+    void deserialize (
+        ramdump_t<matrix<T,NR,NC,mm,l>>&& item_, 
+        std::istream& in 
+    )
+    {
+        auto& item = item_.item;
+        long nr, nc;
+        deserialize(nr, in);
+        deserialize(nc, in);
+        item.set_size(nr,nc);
+        if (item.size() != 0)
+            in.read((char*)&item(0,0), sizeof(item(0,0))*item.size());
+    }
+
+// ----------------------------------------------------------------------------------------
 
     template <
         typename EXP
@@ -2107,8 +2165,10 @@ namespace dlib
 }
 
 #ifdef _MSC_VER
-// put that warning back to its default setting
+// put warnings back to their default settings
 #pragma warning(default : 4355)
+#pragma warning(default : 4723)
+#pragma warning(default : 4724)
 #endif
 
 #endif // DLIB_MATRIx_

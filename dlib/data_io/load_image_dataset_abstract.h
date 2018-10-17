@@ -36,6 +36,7 @@ namespace dlib
                   This means that, initially, all boxes will be loaded.  Therefore, for all
                   possible boxes B we have:
                     - #should_load_box(B) == true
+                - #box_area_thresh() == infinity
         !*/
 
         const std::string& get_filename(
@@ -50,8 +51,9 @@ namespace dlib
         ) const;
         /*!
             ensures
-                - returns true if we are supposed to skip images that don't have any boxes
-                  to load when loading an image dataset using load_image_dataset().
+                - returns true if we are supposed to skip images that don't have any
+                  non-ignored boxes to load when loading an image dataset using
+                  load_image_dataset().
         !*/
 
         image_dataset_file boxes_match_label(
@@ -115,6 +117,26 @@ namespace dlib
                         - returns false
         !*/
 
+        image_dataset_file shrink_big_images(
+            double new_box_area_thresh = 150*150
+        ) const;
+        /*!
+            ensures
+                - returns a copy of *this that is identical in all respects to *this except
+                  that #box_area_thresh() == new_box_area_thresh
+        !*/
+
+        double box_area_thresh(
+        ) const;
+        /*!
+            ensures
+                - If the smallest non-ignored rectangle in an image has an area greater
+                  than box_area_thresh() then we will shrink the image until the area of
+                  the box is about equal to box_area_thresh().  This is useful if you have
+                  a dataset containing very high resolution images and you don't want to
+                  load it in its native high resolution.  Setting the box_area_thresh()
+                  allows you to control the resolution of the loaded images.
+        !*/
     };
 
 // ----------------------------------------------------------------------------------------
@@ -199,10 +221,11 @@ namespace dlib
               dlib/image_processing/generic_image.h.
         ensures
             - This function has essentially the same behavior as the above
-              load_image_dataset() routines, except here we out put to a vector of
+              load_image_dataset() routines, except here we output to a vector of
               mmod_rects instead of rectangles.  In this case, both ignore and non-ignore
               rectangles go into object_locations since mmod_rect has an ignore boolean
-              field that records the ignored/non-ignored state of each rectangle.
+              field that records the ignored/non-ignored state of each rectangle.  We also store 
+              a each box's string label into the mmod_rect::label field as well.
     !*/
 
 // ----------------------------------------------------------------------------------------
