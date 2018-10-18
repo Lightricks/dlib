@@ -55,16 +55,16 @@ template <long num_filters, typename SUBNET> using con3  = con<num_filters,3,3,1
 
 // Now we can define the 8x downsampling block in terms of conv5d blocks.  We
 // also use relu and batch normalization in the standard way.
-template <unsigned long N, typename SUBNET> using downsampler  = relu<bn_con<con5d<N, relu<bn_con<con5d<N, relu<bn_con<con5d<N,SUBNET>>>>>>>>>;
+template <typename SUBNET> using downsampler  = relu<bn_con<con5d<32, relu<bn_con<con5d<32, relu<bn_con<con5d<32,SUBNET>>>>>>>>>;
 
 // The rest of the network will be 3x3 conv layers with batch normalization and
 // relu.  So we define the 3x3 block we will use here.
-template <unsigned long N, typename SUBNET> using rcon3  = relu<bn_con<con3<N,SUBNET>>>;
+template <typename SUBNET> using rcon3  = relu<bn_con<con3<32,SUBNET>>>;
 
 // Finally, we define the entire network.   The special input_rgb_image_pyramid
 // layer causes the network to operate over a spatial pyramid, making the detector
 // scale invariant.  
-using net_type  = loss_mmod<con<1,6,6,1,1,rcon3<32,rcon3<32,rcon3<32,downsampler<32,input_rgb_image_pyramid<pyramid_down<6>>>>>>>>;
+using net_type  = loss_mmod<con<1,6,6,1,1,rcon3<rcon3<rcon3<downsampler<input_rgb_image_pyramid<pyramid_down<6>>>>>>>>;
 
 // ----------------------------------------------------------------------------------------
 
@@ -131,13 +131,20 @@ int main(int argc, char** argv) try
     // pick a good sliding window width and height.  It will also automatically set the
     // non-max-suppression parameters to something reasonable.  For further details see the
     // mmod_options documentation.
-    mmod_options options(face_boxes_train, 40*40);
-    cout << "detection window width,height:      " << options.detector_width << "," << options.detector_height << endl;
+    mmod_options options(face_boxes_train, 40,40);
+    // The detector will automatically decide to use multiple sliding windows if needed.
+    // For the face data, only one is needed however.
+    cout << "num detector windows: "<< options.detector_windows.size() << endl;
+    for (auto& w : options.detector_windows)
+        cout << "detector window width by height: " << w.width << " x " << w.height << endl;
     cout << "overlap NMS IOU thresh:             " << options.overlaps_nms.get_iou_thresh() << endl;
     cout << "overlap NMS percent covered thresh: " << options.overlaps_nms.get_percent_covered_thresh() << endl;
 
     // Now we are ready to create our network and trainer.  
     net_type net(options);
+    // The MMOD loss requires that the number of filters in the final network layer equal
+    // options.detector_windows.size().  So we set that here as well.
+    net.subnet().layer_details().set_num_filters(options.detector_windows.size());
     dnn_trainer<net_type> trainer(net);
     trainer.set_learning_rate(0.1);
     trainer.be_verbose();
@@ -152,7 +159,9 @@ int main(int argc, char** argv) try
     std::vector<std::vector<mmod_rect>> mini_batch_labels; 
     random_cropper cropper;
     cropper.set_chip_dims(200, 200);
-    cropper.set_min_object_height(0.2);
+    // Usually you want to give the cropper whatever min sizes you passed to the
+    // mmod_options constructor, which is what we do here.
+    cropper.set_min_object_size(40,40);
     dlib::rand rnd;
     // Run the trainer until the learning rate gets small.  This will probably take several
     // hours.
@@ -186,6 +195,12 @@ int main(int argc, char** argv) try
     // testing data.
     cout << "testing results:  " << test_object_detection_function(net, images_test, face_boxes_test) << endl;
 
+
+    // If you are running many experiments, it's also useful to log the settings used
+    // during the training experiment.  This statement will print the settings we used to
+    // the screen.
+    cout << trainer << cropper << endl;
+
     // Now lets run the detector on the testing images and look at the outputs.  
     image_window win;
     for (auto&& img : images_test)
@@ -199,6 +214,10 @@ int main(int argc, char** argv) try
         cin.get();
     }
     return 0;
+
+    // Now that you finished this example, you should read dnn_mmod_train_find_cars_ex.cpp,
+    // which is a more advanced example.  It discusses many issues surrounding properly
+    // setting the MMOD parameters and creating a good training dataset.
 
 }
 catch(std::exception& e)

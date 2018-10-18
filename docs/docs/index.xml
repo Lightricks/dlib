@@ -13,7 +13,7 @@
       It is used in both industry and academia in a wide range of domains 
       including robotics, embedded devices, mobile phones, and large high
       performance computing environments. Dlib's <a href="license.html">open source licensing</a> 
-      allows you to use it in any application, free of charge.
+      allows you to use it in any application, free of charge.  
       </p>
 
       <p>
@@ -21,6 +21,11 @@
          Also be sure to read the <a href="howto_contribute.html">how to contribute</a> page if you intend to 
          submit code to the project.
       </p>
+
+      <p>
+         To quickly get started using dlib, <a href="compile.html">follow these instructions to build dlib</a>.
+      </p>
+
 
       <br/>
 
@@ -71,7 +76,7 @@
                      <a href="ml.html#structural_svm_problem">structural support vector machines</a>. </li> 
                   <li>Structural SVM tools for <a href="ml.html#structural_sequence_labeling_trainer">sequence labeling</a> </li>  
                   <li>Structural SVM tools for solving <a href="ml.html#structural_assignment_trainer">assignment problems</a> </li>  
-                  <li>Structural SVM tools for <a href="ml.html#structural_object_detection_trainer">object detection</a> in images </li>  
+                  <li>Structural SVM tools for <a href="ml.html#structural_object_detection_trainer">object detection</a> in images as well as more powerful (but slower) <a href="ml.html#loss_mmod_">deep learning tools for object detection</a>. </li>  
                   <li>Structural SVM tools for <a href="ml.html#structural_graph_labeling_trainer">labeling nodes</a> in graphs </li>  
                   <li>A large-scale <a href="ml.html#svm_rank_trainer">SVM-Rank</a> implementation</li>
                   <li>An online <a href="ml.html#krls">kernel RLS regression</a> algorithm</li>
@@ -144,6 +149,7 @@
                   <li>Tools for <a href="imaging.html#object_detector">detecting objects</a> in images including
                   <a href="imaging.html#get_frontal_face_detector">frontal face detection</a> and
                    <a href="imaging.html#shape_predictor">object pose estimation</a>.</li>
+                   <li>High quality <a href="dnn_face_recognition_ex.cpp.html">face recognition</a></li>
                </ul>
             </li>
 
